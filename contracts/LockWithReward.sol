@@ -121,35 +121,60 @@ contract LockWithReward is Ownable, AccessControl {
 
     // Only Allow the user to withdraw and invalidates all claimables before end time.
     function withdraw() public onlyBeforeEndTime {
+        //Check
+        require(
+            lockIndexes[msg.sender].length > 0,
+            'No locked balance to withdraw'
+        );
+
         uint256 totalLocked = 0;
         uint256[] storage indexes = lockIndexes[msg.sender];
         for (uint256 i = 0; i < indexes.length; i++) {
-            Lock storage balance = balances[msg.sender][i];
+            Lock storage balance = balances[msg.sender][indexes[i]];
             totalLocked += balance.amount;
-            balance.amount = 0;
         }
 
-        bool underlyingTransfer = underlying.transfer(msg.sender, totalLocked);
-        if (!underlyingTransfer) {
-            revert('Transfer failed');
+        // Effects
+        for (uint256 i = 0; i < indexes.length; i++) {
+            balances[msg.sender][indexes[i]].amount = 0;
         }
+
+        // Interactions
+        require(
+            underlying.transfer(msg.sender, totalLocked),
+            'Transfer failed'
+        );
     }
 
     function claimAndWithdraw() public onlyAfterEndTime {
+        // Checks
+        require(
+            lockIndexes[msg.sender].length > 0,
+            'No locked balance to claim and withdraw'
+        );
+
         uint256 totalLocked = 0;
         uint256 totalReward = 0;
         uint256[] storage indexes = lockIndexes[msg.sender];
         for (uint256 i = 0; i < indexes.length; i++) {
             totalReward += _calculateReward(i);
-            Lock storage balance = balances[msg.sender][i];
-            totalLocked += balance.amount;
-            balance.amount = 0;
+            totalLocked += balances[msg.sender][i].amount;
         }
-        bool underlyingTransfer = underlying.transfer(msg.sender, totalLocked);
-        bool rewardTransfer = rewardToken.transfer(msg.sender, totalReward);
-        if (!underlyingTransfer || !rewardTransfer) {
-            revert('Transfer failed');
+
+        // Effects
+        for (uint256 i = 0; i < indexes.length; i++) {
+            balances[msg.sender][indexes[i]].amount = 0;
         }
+
+        // Interactions
+        require(
+            underlying.transfer(msg.sender, totalLocked),
+            'Underlying transfer failed'
+        );
+        require(
+            rewardToken.transfer(msg.sender, totalReward),
+            'Reward token transfer failed'
+        );
     }
 
     function getClaimable() public view returns (uint256) {
