@@ -9,6 +9,8 @@ import '@openzeppelin/contracts/access/AccessControl.sol';
 // import "hardhat/console.sol";
 
 contract LockWithReward is Ownable, AccessControl {
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+
     IERC20Metadata public underlying;
     IERC20Metadata public rewardToken;
     uint public startTime;
@@ -41,7 +43,7 @@ contract LockWithReward is Ownable, AccessControl {
         address _rewardToken,
         uint _startTime,
         uint _endTime
-    ) payable Ownable(msg.sender) {
+    ) Ownable(msg.sender) {
         require(msg.sender != address(0), 'Sender address cannot be zero');
         require(_underlying != address(0), 'Underlying address cannot be zero');
         require(
@@ -58,6 +60,7 @@ contract LockWithReward is Ownable, AccessControl {
         );
         require(block.timestamp < _endTime, 'End time should be in the future');
 
+        super._grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         underlying = IERC20Metadata(_underlying);
         rewardToken = IERC20Metadata(_rewardToken);
         startTime = _startTime;
@@ -211,13 +214,12 @@ contract LockWithReward is Ownable, AccessControl {
     }
 
     // Admin Functions
-    // TODO: Should avoid using DEFAULT_ADMIN_ROLE for safety
     function setTime(
         uint _startTime,
         uint _endTime
     )
         external
-        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyRole(ADMIN_ROLE)
         onlyChangeConfigBeforeStartTime
         onlyValidTime(_startTime, _endTime)
     {
@@ -229,7 +231,7 @@ contract LockWithReward is Ownable, AccessControl {
     function setLevelAmountThreshold(
         uint256 _level1AmountThreshold,
         uint256 _level2AmountThreshold
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) onlyChangeConfigBeforeStartTime {
+    ) external onlyRole(ADMIN_ROLE) onlyChangeConfigBeforeStartTime {
         require(
             _level1AmountThreshold < _level2AmountThreshold,
             'Level 1 threshold must be less than level 2 threshold'
@@ -241,7 +243,7 @@ contract LockWithReward is Ownable, AccessControl {
     function setLevelLockTime(
         uint256 _level1LockTime,
         uint256 _level2LockTime
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) onlyChangeConfigBeforeStartTime {
+    ) external onlyRole(ADMIN_ROLE) onlyChangeConfigBeforeStartTime {
         require(
             _level1LockTime < _level2LockTime,
             'Level 1 lock time must be less than level 2 lock days'
