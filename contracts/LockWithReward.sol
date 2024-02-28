@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import '@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/access/AccessControl.sol';
 
@@ -14,12 +14,30 @@ contract LockWithReward is Ownable, AccessControl {
     uint public startTime;
     uint public endTime;
 
+    uint256 public level1Threshold = 500 * mantissa();
+    uint256 public level2Threshold = 2000 * mantissa();
+    uint256 public level3Threshold = 2001 * mantissa();
+
+    uint256 public level1LockDays = 10 days;
+    uint256 public level2LockDays = 20 days;
+    uint256 public level3LockDays = 20 days + 1;
+
+    enum LockLevel {
+        None,
+        Level1,
+        Level2,
+        Level3
+    }
+
+    struct Lock {
+        uint256 amount;
+        LockLevel lockLevel;
+    }
+
     //ROLE
     // bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
 
-    mapping(address => uint256) private _balances;
-    mapping(uint256 => uint256) public amountlevels;
-    mapping(uint256 => uint256) public dayLevels;
+    mapping(address => Lock) private _balances;
 
     event Withdrawal(uint amount, uint when);
 
@@ -50,35 +68,63 @@ contract LockWithReward is Ownable, AccessControl {
         rewardToken = IERC20Metadata(_rewardToken);
         startTime = _startTime;
         endTime = _endTime;
-        
-        //TODO: setup levels for amount and days 
-        
+
+        //TODO: setup levels for amount and days
+    }
+
+    function mantissa() public pure returns (uint256) {
+        return 1e18;
+    }
+
+    modifier onlyValidTime(uint start, uint end) {
+        require(start < end, 'Start Time should be earlier than end time');
+        _;
+    }
+
+    modifier onlyChangeConfigBeforeStartTime() {
+        require(
+            startTime < block.timestamp,
+            'Configuartion cannot be changed after starting'
+        );
+        _;
+    }
+
+    modifier onlyBeforeEndTime() {
+        require(
+            block.timestamp < endTime,
+            'Function can only be called before end time'
+        );
+        _;
+    }
+
+    modifier onlyAfterEndTime() {
+        require(
+            block.timestamp >= endTime,
+            'Function can only be called after end time'
+        );
+        _;
     }
 
     //external to call only from outside, else public to be also able to call inside
     function setStartTime(
         uint _startTime
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(
-            startTime < block.timestamp,
-            'Configuartion cannot be changed after starting'
-        );
-        require(
-            _startTime < endTime,
-            'Start Time should be earlier than end time'
-        );
+    )
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyChangeConfigBeforeStartTime
+        onlyValidTime(_startTime, endTime)
+    {
         startTime = _startTime;
     }
 
-    function setEndTime(uint _endTime) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(
-            startTime < block.timestamp,
-            'Configuartion cannot be changed after starting'
-        );
-        require(
-            startTime < _endTime,
-            'Start Time should be earlier than end time'
-        );
+    function setEndTime(
+        uint _endTime
+    )
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyChangeConfigBeforeStartTime
+        onlyValidTime(startTime, _endTime)
+    {
         require(block.timestamp < _endTime, 'End time should be in the future');
         endTime = _endTime;
     }
@@ -86,15 +132,12 @@ contract LockWithReward is Ownable, AccessControl {
     function setTime(
         uint _startTime,
         uint _endTime
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(
-            startTime < block.timestamp,
-            'Configuartion cannot be changed after starting'
-        );
-        require(
-            _startTime < _endTime,
-            'Start Time should be earlier than end time'
-        );
+    )
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+        onlyChangeConfigBeforeStartTime
+        onlyValidTime(_startTime, _endTime)
+    {
         require(block.timestamp < _endTime, 'End time should be in the future');
         startTime = _startTime;
         endTime = _endTime;
