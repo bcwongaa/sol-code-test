@@ -147,7 +147,7 @@ describe('LockWithReward', function () {
     });
 
     it('Admin can change amount threshold', async function () {
-      const mantissa = await contract.mantissa();
+      const mantissa = await underlying.decimals();
       const [level1AmountThreshold, level2AmountThreshold] = [
         BigInt(150) * mantissa,
         BigInt(3000) * mantissa,

@@ -17,11 +17,11 @@ contract LockWithReward is Ownable, AccessControl {
     uint public endTime;
     uint256 public lockIdCounter = 0;
 
-    uint256 public level1AmountThreshold = 500 * mantissa();
-    uint256 public level2AmountThreshold = 2000 * mantissa();
+    uint256 public level1AmountThreshold;
+    uint256 public level2AmountThreshold;
 
-    uint256 public level1LockTime = 10 days;
-    uint256 public level2LockTime = 20 days;
+    uint256 public level1LockTime;
+    uint256 public level2LockTime;
 
     enum LockLevel {
         Level1,
@@ -65,10 +65,11 @@ contract LockWithReward is Ownable, AccessControl {
         rewardToken = IERC20Metadata(_rewardToken);
         startTime = _startTime;
         endTime = _endTime;
-    }
 
-    function mantissa() public pure returns (uint256) {
-        return 1e18;
+        level1AmountThreshold = 500 * 10 ** underlying.decimals();
+        level2AmountThreshold = 2000 * 10 ** underlying.decimals();
+        level1LockTime = 10 days;
+        level2LockTime = 20 days;
     }
 
     modifier onlyValidTime(uint start, uint end) {
