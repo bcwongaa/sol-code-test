@@ -35,7 +35,7 @@ contract LockWithReward is Ownable, AccessControl {
     }
 
     mapping(address => mapping(uint256 => Lock)) public balances;
-    mapping(address => uint256[]) private lockIndexes;
+    mapping(address => uint256[]) private balancesIndexes;
 
     // Allow to start in the past (i.e. can lock right away and no configs can be changed)
     constructor(
@@ -90,14 +90,6 @@ contract LockWithReward is Ownable, AccessControl {
         _;
     }
 
-    modifier onlyBeforeEndTime() {
-        require(
-            block.timestamp < endTime,
-            'Function can only be called before end time'
-        );
-        _;
-    }
-
     modifier onlyAfterEndTime() {
         require(
             block.timestamp >= endTime,
@@ -106,7 +98,17 @@ contract LockWithReward is Ownable, AccessControl {
         _;
     }
 
-    function lock(uint256 _amount) public onlyWithinLockTime {
+    function totalLockedAmount() public view returns (uint256) {
+        uint256 totalLocked = 0;
+        uint256[] storage indexes = balancesIndexes[msg.sender];
+        for (uint256 i = 0; i < indexes.length; i++) {
+            Lock storage balance = balances[msg.sender][indexes[i]];
+            totalLocked += balance.amount;
+        }
+        return totalLocked;
+    }
+
+    function lock(uint256 _amount) public onlyWithinLockTime returns (uint256) {
         require(_amount > 0, 'Amount must be greater than zero');
         require(
             underlying.transferFrom(msg.sender, address(this), _amount),
@@ -117,21 +119,22 @@ contract LockWithReward is Ownable, AccessControl {
             amount: _amount,
             lockTime: block.timestamp
         });
-        lockIndexes[msg.sender].push(lockIdCounter);
+        balancesIndexes[msg.sender].push(lockIdCounter);
 
-        lockIdCounter++;
+        return lockIdCounter++;
     }
 
     // Only Allow the user to withdraw and invalidates all claimables before end time.
-    function withdraw() public onlyBeforeEndTime {
+    // Should remove?
+    function withdraw() public onlyWithinLockTime {
         //Check
         require(
-            lockIndexes[msg.sender].length > 0,
+            balancesIndexes[msg.sender].length > 0,
             'No locked balance to withdraw'
         );
 
         uint256 totalLocked = 0;
-        uint256[] storage indexes = lockIndexes[msg.sender];
+        uint256[] storage indexes = balancesIndexes[msg.sender];
         for (uint256 i = 0; i < indexes.length; i++) {
             Lock storage balance = balances[msg.sender][indexes[i]];
             totalLocked += balance.amount;
@@ -152,16 +155,16 @@ contract LockWithReward is Ownable, AccessControl {
     function claimAndWithdraw() public onlyAfterEndTime {
         // Checks
         require(
-            lockIndexes[msg.sender].length > 0,
+            balancesIndexes[msg.sender].length > 0,
             'No locked balance to claim and withdraw'
         );
 
         uint256 totalLocked = 0;
         uint256 totalReward = 0;
-        uint256[] storage indexes = lockIndexes[msg.sender];
+        uint256[] storage indexes = balancesIndexes[msg.sender];
         for (uint256 i = 0; i < indexes.length; i++) {
-            totalReward += _calculateReward(i);
             totalLocked += balances[msg.sender][i].amount;
+            totalReward += _calculateReward(i);
         }
 
         // Effects
@@ -182,7 +185,7 @@ contract LockWithReward is Ownable, AccessControl {
 
     function getClaimable() public view returns (uint256) {
         uint256 totalReward = 0;
-        uint256[] storage indexes = lockIndexes[msg.sender];
+        uint256[] storage indexes = balancesIndexes[msg.sender];
         for (uint256 i = 0; i < indexes.length; i++) {
             totalReward += _calculateReward(i);
         }
