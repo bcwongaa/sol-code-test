@@ -35,8 +35,6 @@ contract LockWithReward is Ownable, AccessControl {
     mapping(address => mapping(uint256 => Lock)) public balances;
     mapping(address => uint256[]) private lockIndexes;
 
-    // event Withdrawal(uint amount, uint when);
-
     // Allow to start in the past (i.e. can lock right away and no configs can be changed)
     constructor(
         address _underlying,
@@ -64,8 +62,6 @@ contract LockWithReward is Ownable, AccessControl {
         rewardToken = IERC20Metadata(_rewardToken);
         startTime = _startTime;
         endTime = _endTime;
-
-        //TODO: setup levels for amount and days
     }
 
     function mantissa() public pure returns (uint256) {
@@ -123,20 +119,37 @@ contract LockWithReward is Ownable, AccessControl {
         lockIdCounter++;
     }
 
-    // Two case: Allow the user to withdraw and invalidates all claimables.
-    // or after end time, allow the user to withdraw
-    function withdraw() public {
-        // require(msg.sender == owner, "You aren't the owner");
-        // owner.transfer(address(this).balance);
+    // Only Allow the user to withdraw and invalidates all claimables before end time.
+    function withdraw() public onlyBeforeEndTime {
+        uint256 totalLocked = 0;
+        uint256[] storage indexes = lockIndexes[msg.sender];
+        for (uint256 i = 0; i < indexes.length; i++) {
+            Lock storage balance = balances[msg.sender][i];
+            totalLocked += balance.amount;
+            balance.amount = 0;
+        }
+
+        bool underlyingTransfer = underlying.transfer(msg.sender, totalLocked);
+        if (!underlyingTransfer){
+            revert("Transfer failed");
+        }
     }
 
-    function claim() public onlyAfterEndTime {
-        uint256 totalReward = getClaimable();
-        // TODO ADD CHECK FOR REWARD BALANCE!
-        require(
-            rewardToken.transfer(msg.sender, totalReward),
-            'Transfer failed'
-        );
+    function claimAndWithdraw() public onlyAfterEndTime {
+        uint256 totalLocked = 0;
+        uint256 totalReward = 0;
+        uint256[] storage indexes = lockIndexes[msg.sender];
+        for (uint256 i = 0; i < indexes.length; i++) {
+            totalReward += _calculateReward(i);
+            Lock storage balance = balances[msg.sender][i];
+            totalLocked += balance.amount;
+            balance.amount = 0;
+        }
+        bool underlyingTransfer = underlying.transfer(msg.sender, totalLocked);
+        bool rewardTransfer = rewardToken.transfer(msg.sender, totalReward);
+        if (!underlyingTransfer || !rewardTransfer){
+            revert("Transfer failed");
+        }
     }
 
     function getClaimable() public view returns (uint256) {
@@ -150,6 +163,7 @@ contract LockWithReward is Ownable, AccessControl {
 
     function _calculateReward(uint256 index) internal view returns (uint256) {
         Lock storage balance = balances[msg.sender][index];
+        // Base reward
         uint256 reward = (balance.amount * 10 ** rewardToken.decimals()) /
             (10 ** underlying.decimals());
         // Amount Reward
