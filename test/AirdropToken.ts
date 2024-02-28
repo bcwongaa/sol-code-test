@@ -1,20 +1,12 @@
-import {
-  time,
-  loadFixture,
-} from '@nomicfoundation/hardhat-toolbox/network-helpers';
-import { anyValue } from '@nomicfoundation/hardhat-chai-matchers/withArgs';
 import { ethers } from 'hardhat';
-import { BigNumberish } from 'ethers';
 import { expect } from 'chai';
+import { ONE_MILLION } from '../shared/global';
 
 describe('AirdropToken', function () {
-  it('Should deploy', async function () {
+  it('Cap should be one million', async function () {
     const name: string = 'Token1';
     const symbol: string = 'TT1';
-    const cap: BigNumberish = ethers.parseEther('1000000'); // 1 million;
-
-    // Contracts are deployed using the first signer/account by default
-    // const [owner, otherAccount] = await ethers.getSigners();
+    const cap = ONE_MILLION; // 1 million;
 
     const AirdropToken = await ethers.getContractFactory('AirdropToken');
     const airdropToken = await AirdropToken.deploy(name, symbol, cap);
@@ -22,3 +14,4 @@ describe('AirdropToken', function () {
     expect(await airdropToken.cap()).to.equal(cap);
   });
 });
+
