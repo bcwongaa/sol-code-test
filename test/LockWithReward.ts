@@ -1,11 +1,8 @@
-import {
-  time,
-  loadFixture,
-} from '@nomicfoundation/hardhat-toolbox/network-helpers';
+import { loadFixture } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import {
-  NINE_HUNDRED_THOUSAND,
+  ONE_DAY,
   ONE_HUNDRED_THOUSAND,
   ONE_MILLION,
   ONE_TRILLION,
@@ -63,16 +60,14 @@ describe('LockWithReward', function () {
       'LockWithReward',
       contractOwner,
     );
+
     const contract = await contractFactory
       .connect(contractOwner)
       .deploy(
         await underlying.getAddress(),
         await rewardToken.getAddress(),
-        UNIX_TIME_IN_SECOND + 10000,
-        UNIX_TIME_IN_SECOND + 100000,
-        {
-          from: contractOwner.address,
-        },
+        BigInt(UNIX_TIME_IN_SECOND + 10000),
+        BigInt(UNIX_TIME_IN_SECOND + 100000),
       );
 
     const ADMIN_ROLE = await contract.ADMIN_ROLE();
@@ -108,11 +103,13 @@ describe('LockWithReward', function () {
         await underlying.getAddress(),
       );
     });
+
     it('Reward Token address matching', async function () {
       expect(await contract.rewardToken()).to.equal(
         await rewardToken.getAddress(),
       );
     });
+
     it('Contract Owner address matching', async function () {
       expect(await contract.owner()).to.equal(await contractOwner.getAddress());
     });
@@ -120,12 +117,50 @@ describe('LockWithReward', function () {
 
   describe('Admin Actions', async function () {
     it('Admin can change time', async function () {
-      console.log(await contract.startTime());
-      console.log(await contract.endTime());
-
-      const startTime = UNIX_TIME_IN_SECOND + 1000;
-      const endTime = UNIX_TIME_IN_SECOND + 100000;
+      const startTime = BigInt(UNIX_TIME_IN_SECOND + 100000);
+      const endTime = BigInt(UNIX_TIME_IN_SECOND + 10000000);
       await contract.connect(contractAdmin).setTime(startTime, endTime);
+      expect(await contract.startTime()).to.equal(startTime);
+      expect(await contract.endTime()).to.equal(endTime);
+    });
+
+    it('Admin can change amount threshold', async function () {
+      const mantissa = await contract.mantissa();
+      const [level1AmountThreshold, level2AmountThreshold] = [
+        BigInt(150) * mantissa,
+        BigInt(3000) * mantissa,
+      ];
+      await contract
+        .connect(contractAdmin)
+        .setLevelAmountThreshold(level1AmountThreshold, level2AmountThreshold);
+
+      expect(await contract.level1AmountThreshold()).to.equal(
+        level1AmountThreshold,
+      );
+      expect(await contract.level2AmountThreshold()).to.equal(
+        level2AmountThreshold,
+      );
+    });
+
+    it('Admin can change lock time threshold', async function () {
+      const [level1LockTime, level2LockTime] = [
+        BigInt(ONE_DAY * 7),
+        BigInt(ONE_DAY * 14),
+      ];
+      await contract
+        .connect(contractAdmin)
+        .setLevelLockTime(level1LockTime, level2LockTime);
+
+      expect(await contract.level1LockTime()).to.equal(level1LockTime);
+      expect(await contract.level2LockTime()).to.equal(level2LockTime);
+    });
+
+    it('Admin cannot change configuration after start time has passed', async function () {
+      const newStartTime = BigInt(UNIX_TIME_IN_SECOND);
+      const newEndTime = BigInt(UNIX_TIME_IN_SECOND + 1000);
+      expect(
+        await contract.connect(contractAdmin).setTime(newStartTime, newEndTime),
+      ).to.reverted;
     });
   });
 });
