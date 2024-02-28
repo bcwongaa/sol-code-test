@@ -13,17 +13,15 @@ contract LockWithReward is Ownable, AccessControl {
     IERC20Metadata public rewardToken;
     uint public startTime;
     uint public endTime;
+    uint256 public lockIdCounter = 0;
 
-    uint256 public level1Threshold = 500 * mantissa();
-    uint256 public level2Threshold = 2000 * mantissa();
-    uint256 public level3Threshold = 2001 * mantissa();
+    uint256 public level1AmountThreshold = 500 * mantissa();
+    uint256 public level2AmountThreshold = 2000 * mantissa();
 
-    uint256 public level1LockDays = 10 days;
-    uint256 public level2LockDays = 20 days;
-    uint256 public level3LockDays = 20 days + 1;
+    uint256 public level1LockTime = 10 days;
+    uint256 public level2LockTime = 20 days;
 
     enum LockLevel {
-        None,
         Level1,
         Level2,
         Level3
@@ -31,17 +29,14 @@ contract LockWithReward is Ownable, AccessControl {
 
     struct Lock {
         uint256 amount;
-        LockLevel lockLevel;
+        uint lockTime;
     }
 
-    //ROLE
-    // bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
+    mapping(address => mapping(uint256 => Lock)) public balances;
 
-    mapping(address => Lock) private _balances;
+    // event Withdrawal(uint amount, uint when);
 
-    event Withdrawal(uint amount, uint when);
-
-    // Allow to start in the past (i.e. can lock right away)
+    // Allow to start in the past (i.e. can lock right away and no configs can be changed)
     constructor(
         address _underlying,
         address _rewardToken,
@@ -89,6 +84,12 @@ contract LockWithReward is Ownable, AccessControl {
         _;
     }
 
+    modifier onlyWithinLockTime() {
+        require(block.timestamp > startTime, 'Lock time not started');
+        require(block.timestamp < endTime, 'Lock time has passed');
+        _;
+    }
+
     modifier onlyBeforeEndTime() {
         require(
             block.timestamp < endTime,
@@ -105,7 +106,26 @@ contract LockWithReward is Ownable, AccessControl {
         _;
     }
 
-    //external to call only from outside, else public to be also able to call inside
+    function lock(uint256 _amount) public onlyWithinLockTime {
+        require(_amount > 0, 'Amount must be greater than zero');
+        require(
+            underlying.transferFrom(msg.sender, address(this), _amount),
+            'Transfer failed'
+        );
+
+        balances[msg.sender][lockIdCounter++] = Lock({
+            amount: _amount,
+            lockTime: block.timestamp
+        });
+    }
+
+    function withdraw() public onlyAfterEndTime {
+        // require(msg.sender == owner, "You aren't the owner");
+        // owner.transfer(address(this).balance);
+    }
+
+    // Admin Functions
+    // TODO: Should avoid using DEFAULT_ADMIN_ROLE for safety
     function setStartTime(
         uint _startTime
     )
@@ -143,14 +163,27 @@ contract LockWithReward is Ownable, AccessControl {
         endTime = _endTime;
     }
 
-    function withdraw() public {
-        // Uncomment this line, and the import of "hardhat/console.sol", to print a log in your terminal
-        // console.log("Unlock time is %o and block timestamp is %o", unlockTime, block.timestamp);
-        // require(block.timestamp >= unlockTime, "You can't withdraw yet");
-        // require(msg.sender == owner, "You aren't the owner");
-        // emit Withdrawal(address(this).balance, block.timestamp);
-        // owner.transfer(address(this).balance);
+    function setLevelAmountThreshold(
+        uint256 _level1AmountThreshold,
+        uint256 _level2AmountThreshold
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) onlyChangeConfigBeforeStartTime {
+        require(
+            _level1AmountThreshold < _level2AmountThreshold,
+            'Level 1 threshold must be less than level 2 threshold'
+        );
+        level1AmountThreshold = _level1AmountThreshold;
+        level2AmountThreshold = _level2AmountThreshold;
     }
 
-    function lock() public {}
+    function setLevelLockTime(
+        uint256 _level1LockTime,
+        uint256 _level2LockTime
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) onlyChangeConfigBeforeStartTime {
+        require(
+            _level1LockTime < _level2LockTime,
+            'Level 1 lock time must be less than level 2 lock days'
+        );
+        level1LockTime = _level1LockTime;
+        level2LockTime = _level2LockTime;
+    }
 }
