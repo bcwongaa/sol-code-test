@@ -78,7 +78,7 @@ contract LockWithReward is Ownable, AccessControl {
 
     modifier onlyChangeConfigBeforeStartTime() {
         require(
-            startTime < block.timestamp,
+            startTime > block.timestamp,
             'Configuartion cannot be changed after starting'
         );
         _;
