@@ -126,7 +126,7 @@ describe('LockWithReward', function () {
     });
   });
 
-  describe('Admin Actions', async function () {
+  describe('Admin Actions - Before lock time starts', async function () {
     beforeEach(async () => {
       [
         contract,
@@ -178,13 +178,83 @@ describe('LockWithReward', function () {
     });
 
     it('Admin cannot change configuration after start time has passed', async function () {
-      const now = BigInt(UNIX_TIME_IN_SECOND);
+      await time.increase(2000000);
       const newStartTime = BigInt(UNIX_TIME_IN_SECOND + 1000);
       const newEndTime = BigInt(UNIX_TIME_IN_SECOND + 10000);
-      await contract.connect(contractAdmin).setTime(now, newEndTime);
 
       await expect(
         contract.connect(contractAdmin).setTime(newStartTime, newEndTime),
+      ).to.be.revertedWith('Configuartion cannot be changed after starting');
+    });
+
+    it('Users cannot change configuartion', async () => {
+      const [level1LockTime, level2LockTime] = [
+        BigInt(ONE_DAY * 7),
+        BigInt(ONE_DAY * 14),
+      ];
+      await contract
+        .connect(contractAdmin)
+        .setLevelLockTime(level1LockTime, level2LockTime);
+
+      await expect(
+        contract
+          .connect(tester)
+          .setLevelLockTime(level1LockTime, level2LockTime),
+      ).to.be.reverted;
+    });
+  });
+
+  describe('Admin Actions - During the lockable period', async () => {
+    beforeEach(async () => {
+      [
+        contract,
+        underlying,
+        rewardToken,
+        contractOwner,
+        contractAdmin,
+        tester,
+      ] = await loadFixture(deployLockWithRewards);
+
+      const now = BigInt(UNIX_TIME_IN_SECOND);
+      // 1728000 seconds is 20 days
+      const endTime = BigInt(UNIX_TIME_IN_SECOND + 1730000);
+      await contract.connect(contractAdmin).setTime(now, endTime);
+    });
+
+    it('Admin cannot change settings', async () => {
+      const [startTime, endTime] = [
+        BigInt(UNIX_TIME_IN_SECOND + 10000),
+        BigInt(UNIX_TIME_IN_SECOND + 100000),
+      ];
+
+      await expect(
+        contract.connect(contractAdmin).setTime(startTime, endTime),
+      ).to.be.revertedWith('Configuartion cannot be changed after starting');
+    });
+  });
+
+  describe('Admin Actions - After the lockable period', async () => {
+    beforeEach(async () => {
+      [
+        contract,
+        underlying,
+        rewardToken,
+        contractOwner,
+        contractAdmin,
+        tester,
+      ] = await loadFixture(deployLockWithRewards);
+
+      await time.increase(2000000);
+    });
+
+    it('Admin cannot change settings', async () => {
+      const [startTime, endTime] = [
+        BigInt(UNIX_TIME_IN_SECOND + 10000 + 2000000),
+        BigInt(UNIX_TIME_IN_SECOND + 100000 + 2000000),
+      ];
+
+      await expect(
+        contract.connect(contractAdmin).setTime(startTime, endTime),
       ).to.be.revertedWith('Configuartion cannot be changed after starting');
     });
   });
@@ -323,6 +393,15 @@ describe('LockWithReward', function () {
         .balanceOf(tester.address);
       expect(currentUnderlyingBalance).greaterThan(orignalUnderlyingBalance);
       expect(currentRewardBalance).greaterThan(originalRewardBalance);
+    });
+
+    it('User should not be able to lock funds', async () => {
+      await underlying
+        .connect(tester)
+        .approve(await contract.getAddress(), ONE_THOUSAND);
+      await expect(
+        contract.connect(tester).lock(ONE_THOUSAND),
+      ).to.be.revertedWith('Lock time has passed');
     });
   });
 });
