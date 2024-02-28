@@ -126,29 +126,6 @@ contract LockWithReward is Ownable, AccessControl {
 
     // Admin Functions
     // TODO: Should avoid using DEFAULT_ADMIN_ROLE for safety
-    function setStartTime(
-        uint _startTime
-    )
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-        onlyChangeConfigBeforeStartTime
-        onlyValidTime(_startTime, endTime)
-    {
-        startTime = _startTime;
-    }
-
-    function setEndTime(
-        uint _endTime
-    )
-        external
-        onlyRole(DEFAULT_ADMIN_ROLE)
-        onlyChangeConfigBeforeStartTime
-        onlyValidTime(startTime, _endTime)
-    {
-        require(block.timestamp < _endTime, 'End time should be in the future');
-        endTime = _endTime;
-    }
-
     function setTime(
         uint _startTime,
         uint _endTime
