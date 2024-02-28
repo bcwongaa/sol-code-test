@@ -9,7 +9,7 @@ import '@openzeppelin/contracts/access/AccessControl.sol';
 // import "hardhat/console.sol";
 
 contract LockWithReward is Ownable, AccessControl {
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+    bytes32 public constant ADMIN_ROLE = keccak256('ADMIN_ROLE');
 
     IERC20Metadata public underlying;
     IERC20Metadata public rewardToken;
