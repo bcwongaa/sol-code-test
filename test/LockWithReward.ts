@@ -92,12 +92,22 @@ describe('LockWithReward', function () {
   let contractAdmin: any;
   let tester: any;
 
-  beforeEach(async function () {
-    [contract, underlying, rewardToken, contractOwner, contractAdmin, tester] =
-      await loadFixture(deployLockWithRewards);
-  });
+  const beforeAllHook = () => {
+    return async function () {
+      [
+        contract,
+        underlying,
+        rewardToken,
+        contractOwner,
+        contractAdmin,
+        tester,
+      ] = await loadFixture(deployLockWithRewards);
+    };
+  };
 
   describe('Deployment', async function () {
+    beforeEach(beforeAllHook);
+
     it('Underlying address matching', async function () {
       expect(await contract.underlying()).to.equal(
         await underlying.getAddress(),
@@ -116,6 +126,8 @@ describe('LockWithReward', function () {
   });
 
   describe('Admin Actions', async function () {
+    beforeEach(beforeAllHook);
+
     it('Admin can change time', async function () {
       const startTime = BigInt(UNIX_TIME_IN_SECOND + 100000);
       const endTime = BigInt(UNIX_TIME_IN_SECOND + 10000000);
