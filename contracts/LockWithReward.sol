@@ -130,8 +130,8 @@ contract LockWithReward is Ownable, AccessControl {
         }
 
         bool underlyingTransfer = underlying.transfer(msg.sender, totalLocked);
-        if (!underlyingTransfer){
-            revert("Transfer failed");
+        if (!underlyingTransfer) {
+            revert('Transfer failed');
         }
     }
 
@@ -147,8 +147,8 @@ contract LockWithReward is Ownable, AccessControl {
         }
         bool underlyingTransfer = underlying.transfer(msg.sender, totalLocked);
         bool rewardTransfer = rewardToken.transfer(msg.sender, totalReward);
-        if (!underlyingTransfer || !rewardTransfer){
-            revert("Transfer failed");
+        if (!underlyingTransfer || !rewardTransfer) {
+            revert('Transfer failed');
         }
     }
 
