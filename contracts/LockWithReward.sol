@@ -33,6 +33,7 @@ contract LockWithReward is Ownable, AccessControl {
     }
 
     mapping(address => mapping(uint256 => Lock)) public balances;
+    mapping(address => uint256[]) private lockIndexes;
 
     // event Withdrawal(uint amount, uint when);
 
@@ -113,15 +114,57 @@ contract LockWithReward is Ownable, AccessControl {
             'Transfer failed'
         );
 
-        balances[msg.sender][lockIdCounter++] = Lock({
+        balances[msg.sender][lockIdCounter] = Lock({
             amount: _amount,
             lockTime: block.timestamp
         });
+        lockIndexes[msg.sender].push(lockIdCounter);
+
+        lockIdCounter++;
     }
 
-    function withdraw() public onlyAfterEndTime {
+    // Two case: Allow the user to withdraw and invalidates all claimables.
+    // or after end time, allow the user to withdraw
+    function withdraw() public {
         // require(msg.sender == owner, "You aren't the owner");
         // owner.transfer(address(this).balance);
+    }
+
+    function claim() public onlyAfterEndTime {
+        
+    }
+
+    function getClaimable() public view returns (uint256) {
+        uint256 totalReward = 0;
+        uint256[] storage indexes = lockIndexes[msg.sender];
+        for(uint256 i = 0; i < indexes.length; i++){
+            totalReward += _calculateReward(i);
+        }
+        return totalReward;
+    }
+
+    function _calculateReward(uint256 index) internal view returns (uint256){
+        uint256 reward = 0;
+        Lock storage balance = balances[msg.sender][index];
+        // Amount Reward
+        if (balance.amount > level2AmountThreshold){
+            // 1.75 = 7 / 4
+            reward = balance.amount * 7 / 4;
+        } else if (balance.amount > level1AmountThreshold) {
+            // 1.5 = 3 / 2
+            reward = balance.amount * 3 / 2;
+        } else {
+            reward = balance.amount;
+        }
+
+        // Lock Time Reward
+        if (endTime - balance.lockTime > level2LockTime){
+           reward += reward * 30 / 100;
+        } else if (endTime - balance.lockTime > level1LockTime){
+            reward += reward * 20 / 100;
+        } 
+
+        return reward;
     }
 
     // Admin Functions
