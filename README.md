@@ -1,1 +1,1 @@
-# satoriResearch-sol-code-test
+# Satori Research Code Test - Solidity
