@@ -149,38 +149,23 @@ contract LockWithReward is Ownable, AccessControl {
     }
 
     function _calculateReward(uint256 index) internal view returns (uint256) {
-        uint256 reward = 0;
         Lock storage balance = balances[msg.sender][index];
+        uint256 reward = (balance.amount * 10 ** rewardToken.decimals()) /
+            (10 ** underlying.decimals());
         // Amount Reward
         if (balance.amount > level2AmountThreshold) {
             // 1.75 = 7 / 4
-            reward =
-                (((balance.amount * 10 ** underlying.decimals()) /
-                    (10 ** rewardToken.decimals())) * 7) /
-                4;
+            reward = (reward * 7) / 4;
         } else if (balance.amount > level1AmountThreshold) {
             // 1.5 = 3 / 2
-            reward =
-                (((balance.amount * 10 ** underlying.decimals()) /
-                    (10 ** rewardToken.decimals())) * 3) /
-                2;
-        } else {
-            reward =
-                (balance.amount * 10 ** underlying.decimals()) /
-                (10 ** rewardToken.decimals());
+            reward = (reward * 3) / 2;
         }
 
         // Lock Time Reward
         if (endTime - balance.lockTime > level2LockTime) {
-            reward +=
-                (((reward * 10 ** underlying.decimals()) /
-                    (10 ** rewardToken.decimals())) * 30) /
-                100;
+            reward += (reward * 30) / 100;
         } else if (endTime - balance.lockTime > level1LockTime) {
-            reward +=
-                (((reward * 10 ** underlying.decimals()) /
-                    (10 ** rewardToken.decimals())) * 20) /
-                100;
+            reward += (reward * 20) / 100;
         }
 
         return reward;
