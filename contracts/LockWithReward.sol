@@ -130,7 +130,14 @@ contract LockWithReward is Ownable, AccessControl {
         // owner.transfer(address(this).balance);
     }
 
-    function claim() public onlyAfterEndTime {}
+    function claim() public onlyAfterEndTime {
+        uint256 totalReward = getClaimable();
+        // TODO ADD CHECK FOR REWARD BALANCE!
+        require(
+            rewardToken.transfer(msg.sender, totalReward),
+            'Transfer failed'
+        );
+    }
 
     function getClaimable() public view returns (uint256) {
         uint256 totalReward = 0;
@@ -147,19 +154,33 @@ contract LockWithReward is Ownable, AccessControl {
         // Amount Reward
         if (balance.amount > level2AmountThreshold) {
             // 1.75 = 7 / 4
-            reward = (balance.amount * 7) / 4;
+            reward =
+                (((balance.amount * 10 ** underlying.decimals()) /
+                    (10 ** rewardToken.decimals())) * 7) /
+                4;
         } else if (balance.amount > level1AmountThreshold) {
             // 1.5 = 3 / 2
-            reward = (balance.amount * 3) / 2;
+            reward =
+                (((balance.amount * 10 ** underlying.decimals()) /
+                    (10 ** rewardToken.decimals())) * 3) /
+                2;
         } else {
-            reward = balance.amount;
+            reward =
+                (balance.amount * 10 ** underlying.decimals()) /
+                (10 ** rewardToken.decimals());
         }
 
         // Lock Time Reward
         if (endTime - balance.lockTime > level2LockTime) {
-            reward += (reward * 30) / 100;
+            reward +=
+                (((reward * 10 ** underlying.decimals()) /
+                    (10 ** rewardToken.decimals())) * 30) /
+                100;
         } else if (endTime - balance.lockTime > level1LockTime) {
-            reward += (reward * 20) / 100;
+            reward +=
+                (((reward * 10 ** underlying.decimals()) /
+                    (10 ** rewardToken.decimals())) * 20) /
+                100;
         }
 
         return reward;
