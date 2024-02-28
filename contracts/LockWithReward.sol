@@ -130,39 +130,37 @@ contract LockWithReward is Ownable, AccessControl {
         // owner.transfer(address(this).balance);
     }
 
-    function claim() public onlyAfterEndTime {
-        
-    }
+    function claim() public onlyAfterEndTime {}
 
     function getClaimable() public view returns (uint256) {
         uint256 totalReward = 0;
         uint256[] storage indexes = lockIndexes[msg.sender];
-        for(uint256 i = 0; i < indexes.length; i++){
+        for (uint256 i = 0; i < indexes.length; i++) {
             totalReward += _calculateReward(i);
         }
         return totalReward;
     }
 
-    function _calculateReward(uint256 index) internal view returns (uint256){
+    function _calculateReward(uint256 index) internal view returns (uint256) {
         uint256 reward = 0;
         Lock storage balance = balances[msg.sender][index];
         // Amount Reward
-        if (balance.amount > level2AmountThreshold){
+        if (balance.amount > level2AmountThreshold) {
             // 1.75 = 7 / 4
-            reward = balance.amount * 7 / 4;
+            reward = (balance.amount * 7) / 4;
         } else if (balance.amount > level1AmountThreshold) {
             // 1.5 = 3 / 2
-            reward = balance.amount * 3 / 2;
+            reward = (balance.amount * 3) / 2;
         } else {
             reward = balance.amount;
         }
 
         // Lock Time Reward
-        if (endTime - balance.lockTime > level2LockTime){
-           reward += reward * 30 / 100;
-        } else if (endTime - balance.lockTime > level1LockTime){
-            reward += reward * 20 / 100;
-        } 
+        if (endTime - balance.lockTime > level2LockTime) {
+            reward += (reward * 30) / 100;
+        } else if (endTime - balance.lockTime > level1LockTime) {
+            reward += (reward * 20) / 100;
+        }
 
         return reward;
     }
