@@ -3,93 +3,15 @@ import {
   loadFixture,
 } from '@nomicfoundation/hardhat-toolbox/network-helpers';
 import { expect } from 'chai';
-import { ethers } from 'hardhat';
 import {
   ONE_DAY,
-  ONE_HUNDRED_THOUSAND,
-  ONE_MILLION,
   ONE_THOUSAND,
-  ONE_TRILLION,
   TWO_THOUSAND,
   UNIX_TIME_IN_SECOND,
+  deployLockWithRewardContractsWithDefaultTokens,
 } from '../shared/global';
 
 describe('LockWithReward', function () {
-  async function deployLockWithRewards() {
-    const [erc20Owner, contractOwner, contractAdmin, tester] =
-      await ethers.getSigners();
-
-    const cap = ONE_TRILLION;
-    const underlyingTokenFactory = await ethers.getContractFactory(
-      'AirdropToken',
-      erc20Owner,
-    );
-    const rewardTokenFactory = await ethers.getContractFactory(
-      'AirdropToken',
-      erc20Owner,
-    );
-    const underlying = await underlyingTokenFactory
-      .connect(erc20Owner)
-      .deploy('Underlying Token', 'USDX', cap);
-    const rewardToken = await rewardTokenFactory
-      .connect(erc20Owner)
-      .deploy('Reward Token', 'BONUS', cap);
-
-    await underlying.mint(erc20Owner.address, ONE_MILLION);
-    await underlying.approve(erc20Owner.address, ONE_MILLION);
-    await underlying.transferFrom(
-      erc20Owner.address,
-      contractOwner.address,
-      ONE_HUNDRED_THOUSAND,
-    );
-    await underlying.transferFrom(
-      erc20Owner.address,
-      contractAdmin.address,
-      ONE_HUNDRED_THOUSAND,
-    );
-    await underlying.transferFrom(
-      erc20Owner.address,
-      tester.address,
-      ONE_HUNDRED_THOUSAND,
-    );
-
-    const contractFactory = await ethers.getContractFactory(
-      'LockWithReward',
-      contractOwner,
-    );
-
-    const contract = await contractFactory
-      .connect(contractOwner)
-      .deploy(
-        await underlying.getAddress(),
-        await rewardToken.getAddress(),
-        BigInt(UNIX_TIME_IN_SECOND + 10000),
-        BigInt(UNIX_TIME_IN_SECOND + 100000),
-      );
-
-    await rewardToken.mint(erc20Owner.address, ONE_MILLION);
-    await rewardToken.approve(erc20Owner.address, ONE_MILLION);
-    await rewardToken.transferFrom(
-      erc20Owner.address,
-      await contract.getAddress(),
-      ONE_MILLION,
-    );
-
-    const ADMIN_ROLE = await contract.ADMIN_ROLE();
-    await contract
-      .connect(contractOwner)
-      .grantRole(ADMIN_ROLE, contractAdmin.address);
-
-    return [
-      contract,
-      underlying,
-      rewardToken,
-      contractOwner,
-      contractAdmin,
-      tester,
-    ];
-  }
-
   let contract: any;
   let underlying: any;
   let rewardToken: any;
@@ -106,7 +28,7 @@ describe('LockWithReward', function () {
         contractOwner,
         contractAdmin,
         tester,
-      ] = await loadFixture(deployLockWithRewards);
+      ] = await loadFixture(deployLockWithRewardContractsWithDefaultTokens);
     });
 
     it('Underlying address matching', async function () {
@@ -135,7 +57,7 @@ describe('LockWithReward', function () {
         contractOwner,
         contractAdmin,
         tester,
-      ] = await loadFixture(deployLockWithRewards);
+      ] = await loadFixture(deployLockWithRewardContractsWithDefaultTokens);
     });
 
     it('Admin can change time', async function () {
@@ -213,7 +135,7 @@ describe('LockWithReward', function () {
         contractOwner,
         contractAdmin,
         tester,
-      ] = await loadFixture(deployLockWithRewards);
+      ] = await loadFixture(deployLockWithRewardContractsWithDefaultTokens);
 
       const now = BigInt(UNIX_TIME_IN_SECOND);
       // 1728000 seconds is 20 days
@@ -242,7 +164,7 @@ describe('LockWithReward', function () {
         contractOwner,
         contractAdmin,
         tester,
-      ] = await loadFixture(deployLockWithRewards);
+      ] = await loadFixture(deployLockWithRewardContractsWithDefaultTokens);
 
       await time.increase(2000000);
     });
@@ -268,7 +190,7 @@ describe('LockWithReward', function () {
         contractOwner,
         contractAdmin,
         tester,
-      ] = await loadFixture(deployLockWithRewards);
+      ] = await loadFixture(deployLockWithRewardContractsWithDefaultTokens);
     });
 
     it('User cannot lock their funds', async () => {
@@ -290,7 +212,7 @@ describe('LockWithReward', function () {
         contractOwner,
         contractAdmin,
         tester,
-      ] = await loadFixture(deployLockWithRewards);
+      ] = await loadFixture(deployLockWithRewardContractsWithDefaultTokens);
 
       const now = BigInt(UNIX_TIME_IN_SECOND);
       // 1728000 seconds is 20 days
@@ -354,7 +276,7 @@ describe('LockWithReward', function () {
         contractOwner,
         contractAdmin,
         tester,
-      ] = await loadFixture(deployLockWithRewards);
+      ] = await loadFixture(deployLockWithRewardContractsWithDefaultTokens);
 
       const now = BigInt(UNIX_TIME_IN_SECOND);
       // 1728000 seconds is 20 days
