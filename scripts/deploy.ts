@@ -1,30 +1,16 @@
-import { ethers } from 'hardhat';
+import { deployLockWithRewardContractsWithDefaultTokens } from '../shared/global';
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const unlockTime = currentTimestampInSeconds + 60;
+  const [
+    contract,
+    underlying,
+    rewardToken,
+    contractOwner,
+    contractAdmin,
+    user,
+  ] = await deployLockWithRewardContractsWithDefaultTokens();
 
-  const lockedAmount = ethers.parseEther('0.001');
-
-  // const lock = await ethers.deployContract("Lock", [unlockTime], {
-  //   value: lockedAmount,
-  // });
-
-  const lock = await ethers.deployContract(
-    'AirdropToken',
-    ['TestToken1', 'TT1', ethers.parseEther('1e24')],
-    {
-      value: lockedAmount,
-    },
-  );
-
-  await lock.waitForDeployment();
-
-  console.log(
-    `Lock with ${ethers.formatEther(
-      lockedAmount,
-    )}ETH and unlock timestamp ${unlockTime} deployed to ${lock.target}`,
-  );
+  console.log(await contract.getAddress());
 }
 
 // We recommend this pattern to be able to use async/await everywhere
@@ -33,4 +19,3 @@ main().catch(error => {
   console.error(error);
   process.exitCode = 1;
 });
-
