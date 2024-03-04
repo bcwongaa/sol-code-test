@@ -12,3 +12,14 @@ node_modules
 # solidity-coverage files
 /coverage
 /coverage.json
+
+/.vscode
+
+# Frontend files
+/frontend/node_modules
+/frontend/.env
+
+/frontend/typechain
+/frontend/typechain-types
+
+/frontend/.vscode
