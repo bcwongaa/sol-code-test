@@ -3,6 +3,7 @@ import { deployLockWithRewardContractsWithDefaultTokens } from '../shared/global
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+//TODO
 async function readContracts(contractName: string, chainId: number) {
   // deploy the contract
   const contractFactory = await ethers.getContractFactory(contractName);
@@ -36,7 +37,7 @@ async function readContracts(contractName: string, chainId: number) {
   let addressesFile = fs.readFileSync(
     path.join(__dirname, '../frontend/src/contracts/addresses.json'),
   );
-  let addressesJson = JSON.parse(addressesFile as unknown as string);
+  let addressesJson = JSON.parse(addressesFile.toString());
 
   if (!addressesJson[contractName]) {
     addressesJson[contractName] = {};
