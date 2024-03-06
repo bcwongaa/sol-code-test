@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import Timer from './components/Timer.vue';
 import Board from './components/Board.vue';
-import Information from './components/Information.vue';
-import { readContract } from '@wagmi/core';
+import Information from './components/Information.vue';\
+import * as fs from 'fs'
 // import { USDTAbi } from '../abi/USDTAbi'
 
-const contractAddress = 'xxx';
+const contractJSON = fs.readFileSync('../../artifacts/contracts/LockWithReward.sol/LockWithReward.json');
+const contractData = JSON.parse(contractJSON.toString());
+
+
 
 // const data = readContract({
 //   abi: USDTAbi,

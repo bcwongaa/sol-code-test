@@ -18,6 +18,7 @@ node_modules
 # Frontend files
 /frontend/node_modules
 /frontend/.env
+/frontend/src/artifacts
 
 /frontend/typechain
 /frontend/typechain-types
