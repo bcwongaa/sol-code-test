@@ -1,4 +1,4 @@
-# Satori Research Code Test - Solidity
+# Code Test - Solidity
 
 # Skills Test
 
